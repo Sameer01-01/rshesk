@@ -2,6 +2,12 @@
 
 **Wind Forecast Monitor** is an institutional-grade, full-stack decision-support and accuracy evaluation platform designed for UK wholesale power traders. Built for electricity utility desks procuring power in the day-ahead wholesale market, the application enforces **zero look-ahead leakage** by isolating the exact wind generation forecasts available prior to day D-1 gate closure (default 09:00 UTC). It quantifies empirical balancing errors (MAE, RMSE, systematic bias, and P90/P95 error buffers), assesses horizon accuracy degradation up to 48 hours, profiles diurnal trends, and provides interactive forecast vintage evolution using official Elexon BMRS market data.
 
+![Wind Forecast Monitor Dashboard](docs/screenshots/dashboard_overview.png)
+*Figure 1: Executive KPI Cards, Time-Series Actual vs Decision-Time Forecast with Empirical P5-P95 Confidence Envelope.*
+
+![Error Breakdown & Horizon Degradation Charts](docs/screenshots/dashboard_charts.png)
+*Figure 2: Signed Error Over Time, Frequency Distribution, Horizon Lead-Time Degradation, and Diurnal Profile.*
+
 ---
 
 ## 🔗 Live Deployment & Documentation
