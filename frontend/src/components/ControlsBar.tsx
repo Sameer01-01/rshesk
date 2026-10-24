@@ -153,11 +153,12 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({ filters, onFiltersChan
             <div className="w-full sm:w-48">
               <div className="flex items-center justify-between mb-2">
                 {sectionTitle(<Clock className="w-3.5 h-3.5" />, 'Cutoff on D-1')}
-                <Info
-                  className="w-3.5 h-3.5 cursor-help mb-2"
-                  style={{ color: 'var(--text-3)' }}
-                  title="Day-ahead gate closure — 09:00 UTC allows preparation margin before UK D-1 auction."
-                />
+                <span title="Day-ahead gate closure — 09:00 UTC allows preparation margin before UK D-1 auction.">
+                  <Info
+                    className="w-3.5 h-3.5 cursor-help mb-2"
+                    style={{ color: 'var(--text-3)' }}
+                  />
+                </span>
               </div>
               <select
                 value={filters.cutoffHour}
