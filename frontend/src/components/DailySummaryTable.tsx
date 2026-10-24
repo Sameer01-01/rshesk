@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { DailyMetric, ComparisonRecord } from '../types'
-import { Download, Table, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
+import { Download, Table2, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface DailySummaryTableProps {
   dailyData: DailyMetric[]
@@ -10,184 +10,133 @@ interface DailySummaryTableProps {
 type SortField = 'date' | 'mae' | 'bias' | 'peakActual' | 'peakForecast' | 'count'
 type SortOrder = 'asc' | 'desc'
 
-export const DailySummaryTable: React.FC<DailySummaryTableProps> = ({
-  dailyData,
-  comparisonData,
-}) => {
+export const DailySummaryTable: React.FC<DailySummaryTableProps> = ({ dailyData, comparisonData }) => {
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
     } else {
       setSortField(field)
-      setSortOrder('desc') // Default to highest error/value first on click
+      setSortOrder('desc')
     }
   }
 
   const sortedData = useMemo(() => {
     return [...dailyData].sort((a, b) => {
-      const aVal = a[sortField]
-      const bVal = b[sortField]
-      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
+      const av = a[sortField], bv = b[sortField]
+      if (av < bv) return sortOrder === 'asc' ? -1 : 1
+      if (av > bv) return sortOrder === 'asc' ? 1 : -1
       return 0
     })
   }, [dailyData, sortField, sortOrder])
 
-  // Download CSV of comparison dataset
   const handleDownloadCsv = () => {
     if (!comparisonData.length) return
-
-    const headers = [
-      'targetStartTimeUTC',
-      'actualGenerationMW',
-      'forecastGenerationMW',
-      'errorMW',
-      'absoluteErrorMW',
-      'forecastPublishTimeUTC',
-      'horizonHours',
-    ]
-
-    const rows = comparisonData.map((r) => [
-      r.startTime,
-      r.actual,
-      r.forecast,
-      r.error,
-      r.absError,
-      r.publishTime,
-      r.horizonHours,
-    ])
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
-
-    const encodedUri = encodeURI(csvContent)
+    const headers = ['targetStartTimeUTC', 'actualGenerationMW', 'forecastGenerationMW', 'errorMW', 'absoluteErrorMW', 'forecastPublishTimeUTC', 'horizonHours']
+    const rows = comparisonData.map(r => [r.startTime, r.actual, r.forecast, r.error, r.absError, r.publishTime, r.horizonHours])
+    const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
     const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `wind_forecast_comparison_jan2026.csv`)
+    link.setAttribute('href', encodeURI(csv))
+    link.setAttribute('download', 'wind_forecast_comparison_jan2026.csv')
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
   }
 
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-slate-500" />
-    }
-    return sortOrder === 'asc' ? (
-      <ChevronUp className="w-3 h-3 text-sky-400" />
-    ) : (
-      <ChevronDown className="w-3 h-3 text-sky-400" />
-    )
+  const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3" style={{ color: 'var(--text-3)' }} />
+    return sortOrder === 'asc'
+      ? <ChevronUp className="w-3 h-3" style={{ color: 'var(--accent)' }} />
+      : <ChevronDown className="w-3 h-3" style={{ color: 'var(--accent)' }} />
   }
 
+  const ThCell: React.FC<{ field: SortField; align?: 'left' | 'right' | 'center'; children: React.ReactNode }> = ({ field, align = 'left', children }) => (
+    <th
+      onClick={() => handleSort(field)}
+      style={{ color: 'var(--text-3)', background: 'var(--bg-subtle)', cursor: 'pointer', userSelect: 'none' }}
+      className={`py-3 px-4 text-[10px] font-bold uppercase tracking-wider transition-colors hover:text-[var(--text-1)]`}
+    >
+      <div className={`flex items-center gap-1.5 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}>
+        {children}
+        <SortIcon field={field} />
+      </div>
+    </th>
+  )
+
   return (
-    <div className="glass-panel rounded-2xl p-5 sm:p-6 mb-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className="text-base font-semibold text-white flex items-center gap-2">
-            <Table className="w-4 h-4 text-sky-400" />
-            Daily Accuracy Summary & Day-Ahead Outturn Ledger
-          </h3>
-          <p className="text-xs text-slate-400">
-            Per-delivery-day accuracy breakdown, peak load, and deviation records for January 2026
-          </p>
+    <div className="glass-panel rounded-2xl p-5 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg shrink-0" style={{ background: 'rgba(56,189,248,0.12)', color: '#38bdf8' }}>
+            <Table2 className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>
+              Daily Accuracy Summary &amp; Outturn Ledger
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+              Per-delivery-day performance breakdown for January 2026 · Click column headers to sort
+            </p>
+          </div>
         </div>
 
         <button
+          id="btn-export-csv"
           onClick={handleDownloadCsv}
           disabled={!comparisonData.length}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/80 text-xs font-medium text-slate-200 transition-colors shadow-sm disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0"
+          style={{
+            background: 'var(--bg-subtle)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-2)',
+          }}
         >
-          <Download className="w-3.5 h-3.5 text-sky-400" />
-          <span>Export Aligned CSV ({comparisonData.length} rows)</span>
+          <Download className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+          Export CSV ({comparisonData.length} rows)
         </button>
       </div>
 
-      <div className="overflow-x-auto max-h-96 overflow-y-auto rounded-xl border border-slate-800">
-        <table className="w-full text-left text-xs text-slate-300">
-          <thead className="bg-slate-900/90 text-slate-400 sticky top-0 z-10 border-b border-slate-800 uppercase text-[11px] font-semibold">
+      {/* Table */}
+      <div
+        className="overflow-x-auto max-h-96 overflow-y-auto rounded-xl"
+        style={{ border: '1px solid var(--border)' }}
+      >
+        <table className="w-full text-left text-xs" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+          <thead className="sticky top-0 z-10" style={{ borderBottom: '1px solid var(--border)' }}>
             <tr>
-              <th
-                onClick={() => handleSort('date')}
-                className="py-3 px-4 cursor-pointer hover:text-white"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>Delivery Date</span>
-                  {renderSortIcon('date')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('mae')}
-                className="py-3 px-4 cursor-pointer hover:text-white text-right"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>MAE (MW)</span>
-                  {renderSortIcon('mae')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('bias')}
-                className="py-3 px-4 cursor-pointer hover:text-white text-right"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Bias (MW)</span>
-                  {renderSortIcon('bias')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('peakActual')}
-                className="py-3 px-4 cursor-pointer hover:text-white text-right"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Peak Actual (MW)</span>
-                  {renderSortIcon('peakActual')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('peakForecast')}
-                className="py-3 px-4 cursor-pointer hover:text-white text-right"
-              >
-                <div className="flex items-center justify-end gap-1.5">
-                  <span>Peak Forecast (MW)</span>
-                  {renderSortIcon('peakForecast')}
-                </div>
-              </th>
-              <th
-                onClick={() => handleSort('count')}
-                className="py-3 px-4 cursor-pointer hover:text-white text-center"
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <span>Hours</span>
-                  {renderSortIcon('count')}
-                </div>
-              </th>
+              <ThCell field="date" align="left">Date</ThCell>
+              <ThCell field="mae" align="right">MAE (MW)</ThCell>
+              <ThCell field="bias" align="right">Bias (MW)</ThCell>
+              <ThCell field="peakActual" align="right">Peak Actual</ThCell>
+              <ThCell field="peakForecast" align="right">Peak Forecast</ThCell>
+              <ThCell field="count" align="center">Hours</ThCell>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-mono">
-            {sortedData.map((row) => (
-              <tr key={row.date} className="hover:bg-slate-850/50 transition-colors">
-                <td className="py-2.5 px-4 font-sans font-medium text-white">{row.date}</td>
-                <td className="py-2.5 px-4 text-right text-sky-400 font-semibold">
+          <tbody>
+            {sortedData.map((row, i) => (
+              <tr
+                key={row.date}
+                className="transition-colors"
+                style={{
+                  background: i % 2 === 0 ? 'transparent' : 'var(--bg-subtle)',
+                  borderBottom: '1px solid var(--border)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-soft)')}
+                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--bg-subtle)')}
+              >
+                <td className="py-3 px-4 font-semibold" style={{ color: 'var(--text-1)', fontFamily: 'Inter, sans-serif' }}>{row.date}</td>
+                <td className="py-3 px-4 text-right font-semibold" style={{ color: '#38bdf8' }}>
                   {row.mae.toLocaleString()}
                 </td>
-                <td
-                  className={`py-2.5 px-4 text-right font-semibold ${
-                    row.bias > 0 ? 'text-amber-400' : 'text-emerald-400'
-                  }`}
-                >
+                <td className="py-3 px-4 text-right font-semibold" style={{ color: row.bias > 0 ? '#f59e0b' : '#34d399' }}>
                   {row.bias > 0 ? `+${row.bias.toLocaleString()}` : row.bias.toLocaleString()}
                 </td>
-                <td className="py-2.5 px-4 text-right text-emerald-400">
-                  {row.peakActual.toLocaleString()}
-                </td>
-                <td className="py-2.5 px-4 text-right text-sky-300">
-                  {row.peakForecast.toLocaleString()}
-                </td>
-                <td className="py-2.5 px-4 text-center text-slate-400">{row.count}</td>
+                <td className="py-3 px-4 text-right" style={{ color: '#34d399' }}>{row.peakActual.toLocaleString()}</td>
+                <td className="py-3 px-4 text-right" style={{ color: '#7dd3fc' }}>{row.peakForecast.toLocaleString()}</td>
+                <td className="py-3 px-4 text-center" style={{ color: 'var(--text-3)' }}>{row.count}</td>
               </tr>
             ))}
           </tbody>

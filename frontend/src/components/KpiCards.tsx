@@ -7,156 +7,163 @@ interface KpiCardsProps {
   isLoading: boolean
 }
 
+const Skeleton: React.FC = () => (
+  <div className="glass-panel card-lift rounded-2xl p-5 flex flex-col gap-3">
+    <div className="skeleton h-3 w-24 rounded-full" />
+    <div className="skeleton h-8 w-32 rounded-lg" />
+    <div className="skeleton h-3 w-20 rounded-full" />
+  </div>
+)
+
+interface KpiCardProps {
+  icon: React.ReactNode
+  label: string
+  value: React.ReactNode
+  sub: React.ReactNode
+  tooltip: string
+  accentColor: string
+  glowColor: string
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ icon, label, value, sub, tooltip, accentColor, glowColor }) => (
+  <div
+    className="glass-panel card-lift gradient-border rounded-2xl p-5 relative overflow-hidden group"
+    title={tooltip}
+  >
+    {/* Background glow orb */}
+    <div
+      className="absolute -top-6 -right-6 w-28 h-28 rounded-full blur-2xl pointer-events-none transition-opacity duration-500 opacity-40 group-hover:opacity-70"
+      style={{ background: glowColor }}
+    />
+
+    {/* Icon + label row */}
+    <div className="flex items-center justify-between mb-2 relative">
+      <div className="flex items-center gap-2">
+        <div
+          className="p-1.5 rounded-lg"
+          style={{ background: `${accentColor}18`, color: accentColor }}
+        >
+          {icon}
+        </div>
+        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>
+          {label}
+        </span>
+      </div>
+      <Info className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity cursor-help" style={{ color: 'var(--text-2)' }} />
+    </div>
+
+    {/* Value */}
+    <div className="relative font-mono text-2xl font-bold tracking-tight" style={{ color: 'var(--text-1)', fontFamily: 'JetBrains Mono, monospace' }}>
+      {value}
+    </div>
+
+    {/* Sub-info */}
+    <div className="mt-1.5 text-[11px] relative" style={{ color: 'var(--text-3)' }}>
+      {sub}
+    </div>
+
+    {/* Bottom accent bar */}
+    <div
+      className="absolute bottom-0 left-0 right-0 h-[2px] rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
+    />
+  </div>
+)
+
 export const KpiCards: React.FC<KpiCardsProps> = ({ metrics, isLoading }) => {
   if (isLoading || !metrics) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="glass-panel rounded-2xl p-4 animate-pulse">
-            <div className="h-3 w-20 bg-slate-800 rounded mb-3"></div>
-            <div className="h-7 w-28 bg-slate-800 rounded mb-2"></div>
-            <div className="h-3 w-16 bg-slate-800 rounded"></div>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} />)}
       </div>
     )
   }
 
-  const formatMw = (val: number) =>
-    new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(val)
-
+  const fmt = (v: number) => new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(v)
   const isOver = metrics.bias > 0
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
-      {/* 1. MAE */}
-      <div className="glass-panel rounded-2xl p-4 relative overflow-hidden group">
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1">
-          <span className="flex items-center gap-1.5">
-            <Activity className="w-4 h-4 text-sky-400" />
-            Mean Abs Error (MAE)
-          </span>
-          <span
-            className="text-slate-500 hover:text-slate-300 cursor-help"
-            title="Average absolute magnitude of difference between forecast and actual generation. Primary benchmark for day-ahead balancing requirements."
-          >
-            <Info className="w-3.5 h-3.5" />
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-white tracking-tight font-mono">
-          {formatMw(metrics.mae)} <span className="text-xs font-normal text-slate-400">MW</span>
-        </div>
-        <div className="mt-1 text-xs text-slate-400 flex items-center justify-between">
-          <span>{metrics.nmae_pct}% of mean</span>
-          <span className="text-[11px] text-slate-500 font-mono">sMAPE {metrics.smape_pct}%</span>
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <KpiCard
+        icon={<Activity className="w-4 h-4" />}
+        label="MAE"
+        tooltip="Mean Absolute Error — average forecast deviation from actual generation. Primary day-ahead benchmark."
+        accentColor="#38bdf8"
+        glowColor="rgba(56, 189, 248, 0.25)"
+        value={<>{fmt(metrics.mae)} <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>MW</span></>}
+        sub={<span>{metrics.nmae_pct}% of mean &nbsp;·&nbsp; sMAPE {metrics.smape_pct}%</span>}
+      />
 
-      {/* 2. RMSE */}
-      <div className="glass-panel rounded-2xl p-4 relative overflow-hidden group">
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1">
-          <span className="flex items-center gap-1.5">
-            <AlertTriangle className="w-4 h-4 text-indigo-400" />
-            Root Mean Sq (RMSE)
+      <KpiCard
+        icon={<AlertTriangle className="w-4 h-4" />}
+        label="RMSE"
+        tooltip="Root Mean Square Error — penalises large spikes and ramps. Crucial for tail-risk assessment."
+        accentColor="#818cf8"
+        glowColor="rgba(129, 140, 248, 0.25)"
+        value={<>{fmt(metrics.rmse)} <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>MW</span></>}
+        sub={
+          <span>
+            Outlier premium:{' '}
+            <span style={{ color: '#818cf8', fontFamily: 'JetBrains Mono, monospace' }}>+{fmt(metrics.rmse - metrics.mae)} MW</span>
           </span>
-          <span
-            className="text-slate-500 hover:text-slate-300 cursor-help"
-            title="Heavily penalizes large forecasting blunders/outliers. Crucial for assessing tail risks during extreme wind ramps."
-          >
-            <Info className="w-3.5 h-3.5" />
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-white tracking-tight font-mono">
-          {formatMw(metrics.rmse)} <span className="text-xs font-normal text-slate-400">MW</span>
-        </div>
-        <div className="mt-1 text-xs text-slate-400">
-          Penalty delta: <strong className="text-indigo-300 font-mono">+{formatMw(metrics.rmse - metrics.mae)} MW</strong>
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+        }
+      />
 
-      {/* 3. Bias */}
-      <div className="glass-panel rounded-2xl p-4 relative overflow-hidden group">
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1">
-          <span className="flex items-center gap-1.5">
-            {isOver ? (
-              <ArrowUpRight className="w-4 h-4 text-amber-400" />
-            ) : (
-              <ArrowDownRight className="w-4 h-4 text-emerald-400" />
-            )}
-            Net Bias (Signed Error)
-          </span>
+      <KpiCard
+        icon={isOver ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+        label="Net Bias"
+        tooltip="Systematic over- or under-forecasting. Positive → over-forecast → short position risk."
+        accentColor={isOver ? '#f59e0b' : '#34d399'}
+        glowColor={isOver ? 'rgba(245, 158, 11, 0.25)' : 'rgba(52, 211, 153, 0.25)'}
+        value={
+          <>
+            {metrics.bias > 0 ? `+${fmt(metrics.bias)}` : fmt(metrics.bias)}{' '}
+            <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>MW</span>
+          </>
+        }
+        sub={
           <span
-            className="text-slate-500 hover:text-slate-300 cursor-help"
-            title="Systematic over- or under-forecasting bias. Positive indicates the model predicted higher than reality, leading to short positions."
+            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+            style={{
+              background: isOver ? 'rgba(245,158,11,0.12)' : 'rgba(52,211,153,0.12)',
+              color: isOver ? '#f59e0b' : '#34d399',
+              border: `1px solid ${isOver ? 'rgba(245,158,11,0.25)' : 'rgba(52,211,153,0.25)'}`,
+            }}
           >
-            <Info className="w-3.5 h-3.5" />
+            {isOver ? '▲ Over-forecast' : '▼ Under-forecast'}
           </span>
-        </div>
-        <div className="text-2xl font-bold text-white tracking-tight font-mono">
-          {metrics.bias > 0 ? `+${formatMw(metrics.bias)}` : formatMw(metrics.bias)}{' '}
-          <span className="text-xs font-normal text-slate-400">MW</span>
-        </div>
-        <div className="mt-1 text-xs flex items-center gap-1.5">
-          <span
-            className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-              isOver ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            }`}
-          >
-            {isOver ? 'OVER-FORECAST' : 'UNDER-FORECAST'}
-          </span>
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+        }
+      />
 
-      {/* 4. P90 Absolute Error */}
-      <div className="glass-panel rounded-2xl p-4 relative overflow-hidden group">
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1">
-          <span className="flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4 text-purple-400" />
-            P90 Planning Buffer
+      <KpiCard
+        icon={<ShieldAlert className="w-4 h-4" />}
+        label="P90 Buffer"
+        tooltip="In 90% of hours, absolute error was below this threshold — the empirical thermal reserve target."
+        accentColor="#c084fc"
+        glowColor="rgba(192, 132, 252, 0.25)"
+        value={<>±{fmt(metrics.p90_abs_error)} <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>MW</span></>}
+        sub={
+          <span>
+            P95:{' '}
+            <span style={{ color: '#c084fc', fontFamily: 'JetBrains Mono, monospace' }}>±{fmt(metrics.p95_abs_error)} MW</span>
           </span>
-          <span
-            className="text-slate-500 hover:text-slate-300 cursor-help"
-            title="In 90% of hours, absolute error was below this value. Use as the empirical thermal reserve buffer."
-          >
-            <Info className="w-3.5 h-3.5" />
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-white tracking-tight font-mono">
-          ±{formatMw(metrics.p90_abs_error)} <span className="text-xs font-normal text-slate-400">MW</span>
-        </div>
-        <div className="mt-1 text-xs text-slate-400 flex items-center justify-between">
-          <span>P95 buffer:</span>
-          <strong className="text-purple-300 font-mono">±{formatMw(metrics.p95_abs_error)} MW</strong>
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+        }
+      />
 
-      {/* 5. Target Coverage */}
-      <div className="glass-panel rounded-2xl p-4 relative overflow-hidden group">
-        <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle className="w-4 h-4 text-teal-400" />
-            Data Coverage
+      <KpiCard
+        icon={<CheckCircle className="w-4 h-4" />}
+        label="Coverage"
+        tooltip="Proportion of target delivery hours with matched forecast and outturn records."
+        accentColor="#2dd4bf"
+        glowColor="rgba(45, 212, 191, 0.25)"
+        value={<>{metrics.coverage_pct}<span className="text-lg font-normal" style={{ color: 'var(--text-3)' }}>%</span></>}
+        sub={
+          <span>
+            Sample:{' '}
+            <span style={{ color: '#2dd4bf', fontFamily: 'JetBrains Mono, monospace' }}>{metrics.count} hours</span>
           </span>
-          <span
-            className="text-slate-500 hover:text-slate-300 cursor-help"
-            title="Proportion of target delivery hours with aligned pre-decision forecasts and verified outturns."
-          >
-            <Info className="w-3.5 h-3.5" />
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-white tracking-tight font-mono">
-          {metrics.coverage_pct}%
-        </div>
-        <div className="mt-1 text-xs text-slate-400 flex items-center justify-between">
-          <span>Target sample:</span>
-          <strong className="text-teal-300 font-mono">{metrics.count} hours</strong>
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 rounded-full blur-xl pointer-events-none"></div>
-      </div>
+        }
+      />
     </div>
   )
 }

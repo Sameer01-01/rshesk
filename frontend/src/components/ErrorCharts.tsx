@@ -1,101 +1,103 @@
 import React, { useMemo } from 'react'
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceLine,
-  CartesianGrid,
-  Cell,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
+  Tooltip, ReferenceLine, CartesianGrid, Cell,
 } from 'recharts'
 import { ComparisonRecord } from '../types'
 import { BarChart3, TrendingDown } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface ErrorChartsProps {
   data: ComparisonRecord[]
 }
 
 export const ErrorCharts: React.FC<ErrorChartsProps> = ({ data }) => {
-  // Timeline formatted data
-  const timeData = useMemo(() => {
-    return data.map((d) => ({
+  const { chart } = useTheme()
+
+  const timeData = useMemo(() =>
+    data.map(d => ({
       time: d.startTime.substring(5, 16).replace('T', ' '),
       error: Math.round(d.error),
-      actual: d.actual,
-      forecast: d.forecast,
-    }))
-  }, [data])
+    })), [data])
 
-  // Build histogram bins for signed error (e.g., bins of 1000 MW from -4000 to +8000)
   const histogramData = useMemo(() => {
     if (!data.length) return []
     const binSize = 1000
-    const errors = data.map((d) => d.error)
+    const errors = data.map(d => d.error)
     const minErr = Math.floor(Math.min(...errors) / binSize) * binSize
     const maxErr = Math.ceil(Math.max(...errors) / binSize) * binSize
-
     const bins: Record<number, number> = {}
-    for (let b = minErr; b <= maxErr; b += binSize) {
-      bins[b] = 0
-    }
-
-    errors.forEach((e) => {
+    for (let b = minErr; b <= maxErr; b += binSize) bins[b] = 0
+    errors.forEach(e => {
       const b = Math.floor(e / binSize) * binSize
-      if (bins[b] !== undefined) {
-        bins[b]++
-      }
+      if (bins[b] !== undefined) bins[b]++
     })
-
-    return Object.entries(bins).map(([binStart, count]) => {
-      const startNum = Number(binStart)
+    return Object.entries(bins).map(([k, count]) => {
+      const s = Number(k)
       return {
-        bin: `${startNum >= 0 ? '+' : ''}${startNum / 1000}k to ${startNum + binSize >= 0 ? '+' : ''}${(startNum + binSize) / 1000}k`,
+        bin: `${s >= 0 ? '+' : ''}${s / 1000}k→${(s + binSize) >= 0 ? '+' : ''}${(s + binSize) / 1000}k`,
         count,
-        binStart: startNum,
+        binStart: s,
       }
     })
   }, [data])
 
   if (!data.length) return null
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      {/* 1. Signed Error Over Time */}
-      <div className="glass-panel rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-sky-400" />
-              Signed Error Over Time (Forecast − Actual)
-            </h3>
-            <p className="text-xs text-slate-400">
-              Positive values indicate over-generation forecasts (shortage risk)
-            </p>
-          </div>
+  const ChartCard: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; accentColor: string; children: React.ReactNode }> = ({ title, subtitle, icon, accentColor, children }) => (
+    <div className="glass-panel rounded-2xl p-5 sm:p-6">
+      <div className="flex items-start gap-3 mb-5">
+        <div className="p-2 rounded-lg shrink-0" style={{ background: `${accentColor}18`, color: accentColor }}>
+          {icon}
         </div>
+        <div>
+          <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
 
+  const tooltipStyle = {
+    background: chart.tooltipBg,
+    border: `1px solid ${chart.tooltipBorder}`,
+    borderRadius: 10,
+    padding: '10px 14px',
+    fontSize: 11,
+    fontFamily: 'JetBrains Mono, monospace',
+    color: chart.tooltipText,
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ChartCard
+        title="Signed Error Over Time (Forecast − Actual)"
+        subtitle="Positive values = over-forecast (shortage risk) · Negative = under-forecast (spill risk)"
+        icon={<TrendingDown className="w-4 h-4" />}
+        accentColor="#38bdf8"
+      >
         <div className="w-full h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={timeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="time" stroke="#64748b" fontSize={10} minTickGap={30} tickLine={false} />
+            <BarChart data={timeData} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+              <XAxis dataKey="time" stroke={chart.axis} fontSize={10} minTickGap={30} tickLine={false} tick={{ fill: chart.axis }} />
               <YAxis
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={10}
-                tickFormatter={(v) => `${v > 0 ? '+' : ''}${(v / 1000).toFixed(0)}k`}
+                tickFormatter={v => `${v > 0 ? '+' : ''}${(v / 1000).toFixed(0)}k`}
                 tickLine={false}
+                tick={{ fill: chart.axis }}
               />
-              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
+              <ReferenceLine y={0} stroke={chart.axis} strokeWidth={1.5} strokeOpacity={0.7} />
               <Tooltip
                 content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null
+                  if (!active || !payload?.length) return null
                   const d = payload[0].payload
                   return (
-                    <div className="bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 shadow-lg text-xs font-mono">
-                      <div className="text-slate-400">{d.time} UTC</div>
-                      <div className={d.error >= 0 ? 'text-amber-400' : 'text-emerald-400'}>
+                    <div style={tooltipStyle}>
+                      <div style={{ color: 'var(--text-2)', marginBottom: 4 }}>{d.time} UTC</div>
+                      <div style={{ color: d.error >= 0 ? '#f59e0b' : '#34d399', fontWeight: 700 }}>
                         Error: {d.error > 0 ? `+${d.error.toLocaleString()}` : d.error.toLocaleString()} MW
                       </div>
                     </div>
@@ -103,56 +105,54 @@ export const ErrorCharts: React.FC<ErrorChartsProps> = ({ data }) => {
                 }}
               />
               <Bar dataKey="error" radius={[2, 2, 0, 0]}>
-                {timeData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.error >= 0 ? '#f59e0b' : '#10b981'}
-                    fillOpacity={0.75}
-                  />
+                {timeData.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.error >= 0 ? '#f59e0b' : '#34d399'} fillOpacity={0.8} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
-      {/* 2. Error Distribution Histogram */}
-      <div className="glass-panel rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-purple-400" />
-              Error Frequency Distribution
-            </h3>
-            <p className="text-xs text-slate-400">
-              Sample count per 1,000 MW error bin (revealing skewness and kurtosis)
-            </p>
-          </div>
-        </div>
-
+      <ChartCard
+        title="Error Frequency Distribution"
+        subtitle="Sample count per 1,000 MW signed error bin — reveals skewness & kurtosis"
+        icon={<BarChart3 className="w-4 h-4" />}
+        accentColor="#818cf8"
+      >
         <div className="w-full h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={histogramData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="bin" stroke="#64748b" fontSize={9} interval={0} angle={-30} textAnchor="end" height={45} tickLine={false} />
-              <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+            <BarChart data={histogramData} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+              <XAxis
+                dataKey="bin"
+                stroke={chart.axis}
+                fontSize={9}
+                interval={0}
+                angle={-28}
+                textAnchor="end"
+                height={48}
+                tickLine={false}
+                tick={{ fill: chart.axis }}
+              />
+              <YAxis stroke={chart.axis} fontSize={10} tickLine={false} tick={{ fill: chart.axis }} />
               <Tooltip
                 content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null
+                  if (!active || !payload?.length) return null
                   const d = payload[0].payload
                   return (
-                    <div className="bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 shadow-lg text-xs font-mono">
-                      <div className="text-slate-300">Bin: {d.bin} MW</div>
-                      <div className="text-purple-400 font-bold">Hours: {d.count}</div>
+                    <div style={tooltipStyle}>
+                      <div style={{ color: 'var(--text-2)', marginBottom: 4 }}>Bin: {d.bin} MW</div>
+                      <div style={{ color: '#818cf8', fontWeight: 700 }}>Hours: {d.count}</div>
                     </div>
                   )
                 }}
               />
-              <Bar dataKey="count" fill="#818cf8" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#818cf8" fillOpacity={0.85} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
     </div>
   )
 }

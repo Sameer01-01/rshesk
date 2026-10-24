@@ -13,7 +13,9 @@ import {
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 async function fetchJson<T>(endpoint: string, params?: Record<string, string | number | undefined>): Promise<T> {
-  const url = new URL(`${BASE_URL}${endpoint}`, window.location.origin)
+  const url = BASE_URL.startsWith('http')
+    ? new URL(`${BASE_URL.replace(/\/$/, '')}${endpoint}`)
+    : new URL(`${BASE_URL}${endpoint}`, window.location.origin)
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {

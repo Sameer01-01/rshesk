@@ -1,125 +1,135 @@
 import React from 'react'
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
+  ResponsiveContainer, BarChart, Bar,
+  XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from 'recharts'
 import { HourMetric, LevelMetric } from '../types'
 import { Clock, Gauge } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface DiurnalAndLevelChartsProps {
   hourData: HourMetric[]
   levelData: LevelMetric[]
 }
 
-export const DiurnalAndLevelCharts: React.FC<DiurnalAndLevelChartsProps> = ({
-  hourData,
-  levelData,
-}) => {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      {/* 1. Hour-of-Day Diurnal Error Profile */}
-      <div className="glass-panel rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Clock className="w-4 h-4 text-sky-400" />
-              Diurnal Error Profile (Hour of Day UTC)
-            </h3>
-            <p className="text-xs text-slate-400">
-              Mean absolute error across the 24 hours of delivery day
-            </p>
-          </div>
-        </div>
+export const DiurnalAndLevelCharts: React.FC<DiurnalAndLevelChartsProps> = ({ hourData, levelData }) => {
+  const { chart } = useTheme()
 
+  const tooltipBase = {
+    background: chart.tooltipBg,
+    border: `1px solid ${chart.tooltipBorder}`,
+    borderRadius: 10,
+    padding: '10px 14px',
+    fontSize: 11,
+    fontFamily: 'JetBrains Mono, monospace',
+    color: chart.tooltipText,
+  }
+
+  const CardHeader: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; color: string }> = ({ icon, title, subtitle, color }) => (
+    <div className="flex items-start gap-3 mb-5">
+      <div className="p-2 rounded-lg shrink-0" style={{ background: `${color}18`, color }}>
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{title}</h3>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{subtitle}</p>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Diurnal Profile */}
+      <div className="glass-panel rounded-2xl p-5 sm:p-6">
+        <CardHeader
+          icon={<Clock className="w-4 h-4" />}
+          title="Diurnal Error Profile (Hour of Day UTC)"
+          subtitle="Mean absolute error across delivery hours — reveals systematic time-of-day forecast patterns"
+          color="#38bdf8"
+        />
         <div className="w-full h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={hourData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <BarChart data={hourData} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
               <XAxis
                 dataKey="hour"
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={10}
-                tickFormatter={(h) => `${String(h).padStart(2, '0')}h`}
+                tickFormatter={h => `${String(h).padStart(2, '0')}h`}
                 tickLine={false}
+                tick={{ fill: chart.axis }}
               />
               <YAxis
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={10}
-                tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
+                tickFormatter={v => `${(v / 1000).toFixed(1)}k`}
                 tickLine={false}
+                tick={{ fill: chart.axis }}
               />
               <Tooltip
                 content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null
+                  if (!active || !payload?.length) return null
                   const d = payload[0].payload as HourMetric
                   return (
-                    <div className="bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 shadow-lg text-xs font-mono space-y-1">
-                      <div className="text-white font-bold">{String(d.hour).padStart(2, '0')}:00 UTC</div>
-                      <div className="text-sky-400">MAE: {d.mae.toLocaleString()} MW</div>
-                      <div className="text-amber-400">Bias: {d.bias > 0 ? `+${d.bias.toLocaleString()}` : d.bias.toLocaleString()} MW</div>
-                      <div className="text-slate-400 text-[10px]">Mean Gen: {d.meanActual.toLocaleString()} MW</div>
+                    <div style={tooltipBase}>
+                      <div style={{ fontWeight: 700, color: chart.tooltipText, marginBottom: 6 }}>
+                        {String(d.hour).padStart(2, '0')}:00 UTC
+                      </div>
+                      <div style={{ color: '#38bdf8' }}>MAE: {d.mae.toLocaleString()} MW</div>
+                      <div style={{ color: '#f59e0b' }}>Bias: {d.bias > 0 ? `+${d.bias.toLocaleString()}` : d.bias.toLocaleString()} MW</div>
+                      <div style={{ color: 'var(--text-3)', fontSize: 10, marginTop: 4 }}>
+                        Mean Gen: {d.meanActual.toLocaleString()} MW
+                      </div>
                     </div>
                   )
                 }}
               />
-              <Bar dataKey="mae" fill="#0284c7" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="mae" fill="#0284c7" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* 2. Error by Actual Generation Regime */}
+      {/* Wind Regime Breakdown */}
       <div className="glass-panel rounded-2xl p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Gauge className="w-4 h-4 text-emerald-400" />
-              Forecast Accuracy by Wind Generation Regime
-            </h3>
-            <p className="text-xs text-slate-400">
-              Low (&lt;7 GW), Medium (7–13 GW), and High (&gt;13 GW) system load regimes
-            </p>
-          </div>
-        </div>
-
+        <CardHeader
+          icon={<Gauge className="w-4 h-4" />}
+          title="Accuracy by Wind Generation Regime"
+          subtitle="Low (&lt;7 GW), Medium (7–13 GW), High (&gt;13 GW) — reveals conditional error patterns"
+          color="#34d399"
+        />
         <div className="w-full h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={levelData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="regime" stroke="#64748b" fontSize={10} tickLine={false} />
+            <BarChart data={levelData} margin={{ top: 5, right: 8, left: -12, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+              <XAxis dataKey="regime" stroke={chart.axis} fontSize={10} tickLine={false} tick={{ fill: chart.axis }} />
               <YAxis
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={10}
-                tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
+                tickFormatter={v => `${(v / 1000).toFixed(1)}k`}
                 tickLine={false}
+                tick={{ fill: chart.axis }}
               />
               <Tooltip
                 content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null
+                  if (!active || !payload?.length) return null
                   const d = payload[0].payload as LevelMetric
                   return (
-                    <div className="bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 shadow-lg text-xs font-mono space-y-1">
-                      <div className="text-white font-bold">{d.regime}</div>
-                      <div className="text-sky-400">MAE: {d.mae.toLocaleString()} MW ({d.nmaePct}% of regime mean)</div>
-                      <div className="text-indigo-400">RMSE: {d.rmse.toLocaleString()} MW</div>
-                      <div className="text-amber-400">Bias: {d.bias > 0 ? `+${d.bias.toLocaleString()}` : d.bias.toLocaleString()} MW</div>
-                      <div className="text-slate-400 text-[10px]">Hours Evaluated: {d.count}</div>
+                    <div style={tooltipBase}>
+                      <div style={{ fontWeight: 700, color: chart.tooltipText, marginBottom: 6 }}>{d.regime}</div>
+                      <div style={{ color: '#38bdf8' }}>MAE: {d.mae.toLocaleString()} MW ({d.nmaePct}% of mean)</div>
+                      <div style={{ color: '#818cf8' }}>RMSE: {d.rmse.toLocaleString()} MW</div>
+                      <div style={{ color: '#f59e0b' }}>Bias: {d.bias > 0 ? `+${d.bias.toLocaleString()}` : d.bias.toLocaleString()} MW</div>
+                      <div style={{ color: 'var(--text-3)', fontSize: 10, marginTop: 4 }}>
+                        Hours: {d.count}
+                      </div>
                     </div>
                   )
                 }}
               />
               <Bar dataKey="mae" radius={[4, 4, 0, 0]}>
-                {levelData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={['#38bdf8', '#818cf8', '#c084fc'][index % 3]}
-                  />
+                {levelData.map((_, i) => (
+                  <Cell key={i} fill={['#38bdf8', '#818cf8', '#c084fc'][i % 3]} fillOpacity={0.85} />
                 ))}
               </Bar>
             </BarChart>
