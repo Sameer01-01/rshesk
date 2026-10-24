@@ -1,0 +1,33 @@
+# Wind Forecast Monitor - Project Context & Living Knowledge Base
+Last Updated: Phase 0 Initialized
+
+## 1. Project Overview & Business Context
+- **Client**: UK Energy Utility wholesale electricity trading desk.
+- **Problem**: Power buyers procure day-ahead power on the wholesale market for delivery day D. Procurement decisions occur on day D-1 before gate closure (default 09:00 UTC). They need to know how much thermal/other power to procure beyond wind generation.
+- **Objective**:
+  1. Visualize the exact decision-time wind generation forecast available before day D-1 cutoff (zero look-ahead leakage).
+  2. Quantitatively evaluate forecast accuracy (Bias, MAE, RMSE, sMAPE, P90, error percentiles, horizon degradation, hour-of-day, wind-level breakdown) to size empirical planning buffers.
+- **Scope Limits**:
+  - UK National wind generation only.
+  - Elexon BMRS API only (FUELHH for actuals, WINDFOR for forecasts).
+  - Target evaluation window: January 2026 delivery (forecasts published from 2025-12-25 to 2026-01-31).
+  - Bundled offline data for zero-latency, reliable deployment without runtime Elexon dependency.
+
+## 2. Technical Stack
+- **Backend**: Python 3.12, FastAPI, Uvicorn, Pandas, PyArrow, Pydantic v2, HTTPX, Pytest, Ruff.
+- **Frontend**: React 18, Vite, TypeScript, Recharts, TanStack Query, Tailwind CSS, Lucide icons, date-fns.
+- **Containerization**: Multi-stage Dockerfile (builds React frontend and packages into FastAPI single-container deployment), docker-compose.yml.
+- **CI/CD**: GitHub Actions workflow (linting, pytest, typecheck, vite build, docker build).
+
+## 3. Progress Tracking
+- [x] Workspace initialized & git initialized
+- [x] Phase 0: Inspect Elexon BMRS APIs (FUELHH & WINDFOR), verify schemas/limits, write `docs/DATA_NOTES.md`
+- [ ] Phase 1: Repo scaffold, tooling, config, CI skeleton
+- [ ] Phase 2: `fetch_data.py` data ingestion script, raw/clean Parquet data files, data quality report
+- [ ] Phase 3: Core analytics modules (selection, metrics, horizon, buckets) + comprehensive unit tests
+- [ ] Phase 4: FastAPI REST API endpoints + integration tests
+- [ ] Phase 5: High-polish React dashboard frontend
+- [ ] Phase 6: Docker containerization (multi-stage root Dockerfile + docker-compose)
+- [ ] Phase 7: Complete documentation (README, ARCHITECTURE, METHODOLOGY, DEPLOYMENT, VIDEO_SCRIPT)
+- [ ] Phase 8: Browser subagent end-to-end verification and screenshots
+- [ ] Phase 9: Final checklist and submission report
